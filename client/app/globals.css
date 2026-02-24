@@ -3,16 +3,16 @@
 @tailwind utilities;
 
 :root {
-  --color-primary: #0891B2;
-  --color-primary-light: #22D3EE;
-  --color-secondary: #22D3EE;
-  --color-cta: #22C55E;
-  --color-background: #F0FDFA;
-  --color-text: #134E4A;
-  --color-text-muted: #64748B;
-  --color-surface: #FFFFFF;
-  --color-border: #E2E8F0;
-  --color-error: #EF4444;
+  --color-primary: #099c8f;
+  --color-primary-light: #6ed6cc;
+  --color-secondary: #475569;
+  --color-cta: #099c8f;
+  --color-background: #F8FAFC;
+  --color-text: #0f172a;
+  --color-text-muted: #64748b;
+  --color-surface: #ffffff;
+  --color-border: #e2e8f0;
+  --color-error: #ef4444;
 }
 
 * {
@@ -25,8 +25,8 @@ html {
 
 body {
   margin: 0;
-  font-family: 'Noto Sans', sans-serif;
-  background: linear-gradient(180deg, #F0FDFA 0%, #FFFFFF 100%);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: var(--color-background);
   color: var(--color-text);
   line-height: 1.6;
   min-height: 100vh;
@@ -35,8 +35,8 @@ body {
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Figtree', sans-serif;
-  font-weight: 600;
+  font-family: inherit;
+  font-weight: 500;
   line-height: 1.2;
 }
 
@@ -46,7 +46,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 button, a {
-  transition: all 0.2s ease-in-out;
+  transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out;
 }
 
 ::-webkit-scrollbar {
@@ -60,59 +60,35 @@ button, a {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-primary);
+  background: #cbd5e1;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #0e7490;
-}
-
-@keyframes pulse-soft {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.7;
-  }
-}
-
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
-}
-
-.animate-pulse-soft {
-  animation: pulse-soft 2s ease-in-out infinite;
-}
-
-.animate-float {
-  animation: float 3s ease-in-out infinite;
+  background: #94a3b8;
 }
 
 .aspect-video {
   aspect-ratio: 16 / 9;
 }
 
-.glass {
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-
-.gradient-text {
-  background: linear-gradient(135deg, #0891B2 0%, #22D3EE 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
 button, a, input, select, textarea {
   min-height: 44px;
+}
+
+@keyframes breathe {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scale(1.02);
+    opacity: 1;
+  }
+}
+
+.animate-breathe {
+  animation: breathe 2.4s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {

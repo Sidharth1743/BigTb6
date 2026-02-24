@@ -9,25 +9,21 @@ export function ConnectionStatus({ status }: ConnectionStatusProps) {
     disconnected: { 
       color: 'bg-slate-400', 
       text: 'Disconnected', 
-      pulse: false,
       textColor: 'text-slate-600'
     },
     connecting: { 
-      color: 'bg-yellow-400', 
+      color: 'bg-amber-400', 
       text: 'Connecting...', 
-      pulse: true,
-      textColor: 'text-yellow-600'
+      textColor: 'text-amber-700'
     },
     connected: { 
-      color: 'bg-green-500', 
+      color: 'bg-[#099c8f]', 
       text: 'Connected', 
-      pulse: true,
-      textColor: 'text-green-600'
+      textColor: 'text-[#0a7f75]'
     },
     error: { 
       color: 'bg-red-500', 
       text: 'Error', 
-      pulse: false,
       textColor: 'text-red-600'
     }
   };
@@ -36,7 +32,7 @@ export function ConnectionStatus({ status }: ConnectionStatusProps) {
   
   return (
     <div className="flex items-center gap-2">
-      <div className={`w-3 h-3 rounded-full ${config.color} ${config.pulse ? 'animate-pulse' : ''}`} />
+      <div className={`w-2.5 h-2.5 rounded-full ${config.color}`} />
       <span className={`text-sm font-medium ${config.textColor}`}>{config.text}</span>
     </div>
   );

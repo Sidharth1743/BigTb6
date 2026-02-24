@@ -15,7 +15,7 @@ const notoSans = Noto_Sans({
 })
 
 export const metadata: Metadata = {
-  title: 'Medical Brain - AI Diagnostic Assistant',
+  title: 'BigTB6 - TB Diagnostic Tool',
   description: 'Real-time AI diagnostic assistant powered by Gemini Live for TB symptom assessment',
 }
 

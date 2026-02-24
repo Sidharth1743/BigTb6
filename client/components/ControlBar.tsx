@@ -22,17 +22,17 @@ export function ControlBar({
   onEndCall,
 }: ControlBarProps) {
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-teal-100 z-50">
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div className="flex items-center justify-center gap-3 sm:gap-4">
           {/* Microphone Toggle */}
           <button 
             onClick={onToggleMic}
             disabled={!isConnected}
-            className={`group p-4 rounded-full transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
+            className={`group p-3 rounded-lg border border-slate-200 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed ${
               micEnabled 
-                ? 'bg-teal-100 text-teal-600 hover:bg-teal-200' 
-                : 'bg-red-100 text-red-600 hover:bg-red-200'
+                ? 'bg-white text-slate-700 hover:bg-slate-50' 
+                : 'bg-red-50 text-red-700 hover:bg-red-100'
             }`}
             aria-label={micEnabled ? 'Mute microphone' : 'Unmute microphone'}
             title={micEnabled ? 'Mute' : 'Unmute'}
@@ -53,10 +53,10 @@ export function ControlBar({
           <button 
             onClick={onToggleCamera}
             disabled={!isConnected}
-            className={`group p-4 rounded-full transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
+            className={`group p-3 rounded-lg border border-slate-200 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed ${
               cameraEnabled 
-                ? 'bg-teal-100 text-teal-600 hover:bg-teal-200' 
-                : 'bg-red-100 text-red-600 hover:bg-red-200'
+                ? 'bg-white text-slate-700 hover:bg-slate-50' 
+                : 'bg-red-50 text-red-700 hover:bg-red-100'
             }`}
             aria-label={cameraEnabled ? 'Turn off camera' : 'Turn on camera'}
             title={cameraEnabled ? 'Turn off camera' : 'Turn on camera'}
@@ -76,10 +76,10 @@ export function ControlBar({
           <button 
             onClick={onToggleScreenShare}
             disabled={!isConnected}
-            className={`group p-4 rounded-full transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed ${
+            className={`group p-3 rounded-lg border border-slate-200 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed ${
               screenSharing 
-                ? 'bg-cyan-100 text-cyan-600 hover:bg-cyan-200' 
-                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                ? 'bg-slate-100 text-slate-700 hover:bg-slate-200' 
+                : 'bg-white text-slate-700 hover:bg-slate-50'
             }`}
             aria-label={screenSharing ? 'Stop sharing screen' : 'Share screen'}
             title={screenSharing ? 'Stop sharing' : 'Share screen'}
@@ -95,21 +95,6 @@ export function ControlBar({
             )}
           </button>
 
-          {/* Spacer */}
-          <div className="w-4 sm:w-8" />
-
-          {/* End Call Button */}
-          <button 
-            onClick={onEndCall}
-            disabled={!isConnected}
-            className="px-6 sm:px-8 py-4 bg-red-500 hover:bg-red-600 text-white rounded-full font-semibold transition-all duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl hover:scale-105 active:scale-95"
-            aria-label="End call"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M5 3a2 2 0 00-2 2v1c0 8.284 6.716 15 15 15h1a2 2 0 002-2v-3.28a1 1 0 00-.684-.948l-4.493-1.498a1 1 0 00-1.21.502l-1.13 2.257a11.042 11.042 0 01-5.516-5.517l2.257-1.128a1 1 0 00.502-1.21L9.228 3.683A1 1 0 008.279 3H5z" />
-            </svg>
-            <span className="hidden sm:inline">End Call</span>
-          </button>
         </div>
       </div>
     </div>
