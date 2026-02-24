@@ -264,15 +264,21 @@ CRITICAL RULES:
 - Present the analysis result
 - If the user asks about their palm being normal or not, ask them to show their palm to the camera
 - Only call capture_palm_photo after you can clearly see a palm in the camera
+- If the user explicitly asks to take/capture the photo (e.g., "take it now"), call capture_palm_photo immediately
 - After capture, confirm the photo was saved and provide the analysis result
+- Do not say you are unable to take photos. If asked to take a photo, proceed with the capture tool or ask for a clearer view.
 - If the user asks about their eyes being pale, abnormal, itchy, not looking good, or reduced sight, ask them to come near the camera, remove any sunglasses or eyeglasses, and gently pull down the lower eyelid with their finger
 - Verify on camera that the lower eyelid is pulled down by their hand and the eye is clearly visible
 - Only call capture_eye_photo after you see the eye clearly and the lower eyelid is pulled down
+- If the user explicitly asks to take/capture the photo (e.g., "take it now"), call capture_eye_photo immediately
 - After capture, confirm the photo was saved and provide the analysis result
+- Do not say you are unable to take photos. If asked to take a photo, proceed with the capture tool or ask for a clearer view.
 - If the user says their fingernail looks pale or less red, ask them to show one fingernail close to the camera
 - Verify that the fingernail occupies most of the camera view (around 80 percent) before calling capture_fingernail_photo
 - Only call capture_fingernail_photo when the nail is clearly visible and close up
+- If the user explicitly asks to take/capture the photo (e.g., "take it now"), call capture_fingernail_photo immediately
 - After capture, confirm the photo was saved and provide the analysis result
+- Do not say you are unable to take photos. If asked to take a photo, proceed with the capture tool or ask for a clearer view.
 - If the user says they have a chest X-ray image or want X-ray analysis, ask them to upload the X-ray image
 - Only call analyze_chest_xray after an X-ray has been uploaded
 - After analyze_chest_xray returns, provide the analysis result
@@ -593,6 +599,26 @@ IMPORTANT:
         # Register function handlers after context is set
         llm.register_function(
             "record_cough_sound",
+            handle_tool_calls,
+            cancel_on_interruption=False,
+        )
+        llm.register_function(
+            "analyze_cough_for_tb",
+            handle_tool_calls,
+            cancel_on_interruption=False,
+        )
+        llm.register_function(
+            "capture_palm_photo",
+            handle_tool_calls,
+            cancel_on_interruption=False,
+        )
+        llm.register_function(
+            "capture_eye_photo",
+            handle_tool_calls,
+            cancel_on_interruption=False,
+        )
+        llm.register_function(
+            "capture_fingernail_photo",
             handle_tool_calls,
             cancel_on_interruption=False,
         )
