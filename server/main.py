@@ -3,10 +3,11 @@ import asyncio
 import subprocess
 import aiohttp
 import time
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
+from xray_store import set_latest_xray_path
 
 load_dotenv()
 
@@ -122,6 +123,37 @@ async def start_bot(request: Request):
             stderr=subprocess.PIPE,
         )
         return {"status": "started", "pid": process.pid}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/upload_xray")
+async def upload_xray(file: UploadFile = File(...)):
+    """Upload a chest X-ray image and store latest path for analysis."""
+    try:
+        if not file.filename:
+            raise HTTPException(status_code=400, detail="Missing filename")
+
+        safe_name = "".join(
+            c if c.isalnum() or c in "-_." else "_" for c in file.filename
+        )
+        capture_dir = os.path.join(os.path.dirname(__file__), "xray_images")
+        os.makedirs(capture_dir, exist_ok=True)
+
+        timestamp = int(time.time())
+        file_path = os.path.join(capture_dir, f"xray_{timestamp}_{safe_name}")
+
+        contents = await file.read()
+        if not contents:
+            raise HTTPException(status_code=400, detail="Empty file")
+
+        with open(file_path, "wb") as f:
+            f.write(contents)
+
+        set_latest_xray_path(file_path)
+        return {"status": "ok", "path": file_path}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

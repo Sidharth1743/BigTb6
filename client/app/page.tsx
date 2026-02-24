@@ -18,12 +18,18 @@ export default function Home() {
   const [messages, setMessages] = useState<TranscriptMessage[]>([]);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [needsAudioGesture, setNeedsAudioGesture] = useState(false);
+  const [xrayFile, setXrayFile] = useState<File | null>(null);
+  const [xrayUploading, setXrayUploading] = useState(false);
+  const [xrayUploadStatus, setXrayUploadStatus] = useState<string | null>(null);
+  const [xrayUploadError, setXrayUploadError] = useState<string | null>(null);
   
   const clientRef = useRef<PipecatClient | null>(null);
   const transportRef = useRef<SmallWebRTCTransport | null>(null);
   const botAudioRef = useRef<HTMLAudioElement | null>(null);
   const startEndpoint =
     process.env.NEXT_PUBLIC_PIPECAT_START_ENDPOINT ?? 'http://localhost:7860/start';
+  const xrayUploadEndpoint =
+    process.env.NEXT_PUBLIC_XRAY_UPLOAD_ENDPOINT ?? 'http://localhost:8000/upload_xray';
 
   // Add message to transcript
   const addMessage = useCallback((speaker: 'user' | 'bot', text: string) => {
@@ -198,6 +204,37 @@ export default function Home() {
     }
   };
 
+  const uploadXray = async () => {
+    if (!xrayFile) return;
+    setXrayUploading(true);
+    setXrayUploadStatus(null);
+    setXrayUploadError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', xrayFile);
+
+      const response = await fetch(xrayUploadEndpoint, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || 'Upload failed');
+      }
+
+      const data = await response.json();
+      setXrayUploadStatus(data?.path ? `Uploaded: ${data.path}` : 'Upload complete');
+      setXrayFile(null);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Upload failed';
+      setXrayUploadError(message);
+    } finally {
+      setXrayUploading(false);
+    }
+  };
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -250,6 +287,41 @@ export default function Home() {
           
           {/* Transcript Panel */}
           <TranscriptPanel messages={messages} />
+
+          {/* Chest X-ray Upload */}
+          <div className="mt-8 rounded-2xl border border-teal-100/70 bg-white/80 p-6 shadow-sm">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div>
+                <h3 className="text-lg font-semibold text-teal-900">Chest X-ray Upload</h3>
+                <p className="text-sm text-slate-600">
+                  Upload an X-ray image, then ask the bot to analyze the chest X-ray.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setXrayFile(e.target.files?.[0] ?? null)}
+                className="block w-full text-sm text-slate-600 file:mr-4 file:rounded-full file:border-0 file:bg-teal-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-teal-700 hover:file:bg-teal-100"
+              />
+              <button
+                onClick={uploadXray}
+                disabled={!xrayFile || xrayUploading}
+                className="px-5 py-2 rounded-full bg-teal-600 text-white text-sm font-semibold disabled:opacity-60 disabled:cursor-not-allowed hover:bg-teal-700 transition"
+              >
+                {xrayUploading ? 'Uploading…' : 'Upload X-ray'}
+              </button>
+            </div>
+
+            {xrayUploadStatus && (
+              <p className="mt-3 text-sm text-emerald-700">{xrayUploadStatus}</p>
+            )}
+            {xrayUploadError && (
+              <p className="mt-3 text-sm text-red-600">{xrayUploadError}</p>
+            )}
+          </div>
 
           {/* Start Button (when not connected) */}
           {connectionStatus === 'disconnected' && (

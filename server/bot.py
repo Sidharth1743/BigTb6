@@ -2,6 +2,7 @@ import os
 import io
 import asyncio
 import logging
+import json
 from datetime import datetime
 from dotenv import load_dotenv
 
@@ -35,6 +36,8 @@ from tb_audio_tool import analyze_cough_file, AudioCapture, save_audio_to_wav
 from palm_anemia_tool import analyze_palm_file
 from eye_anemia_tool import analyze_eye_file
 from nail_anemia_tool import analyze_nail_file
+from chest_xray_tool import analyze_xray_file
+from xray_store import get_latest_xray_path
 
 logging.basicConfig(level=logging.INFO)
 load_dotenv()
@@ -54,6 +57,15 @@ got_user_track_audio = False
 latest_image_frame = None
 last_cough_file_path = None
 last_palm_file_path = None
+
+
+def save_analysis_json(source_path: str, analysis: dict) -> str:
+    """Save analysis JSON alongside the source file and return the path."""
+    base, _ = os.path.splitext(source_path)
+    analysis_path = f"{base}_analysis.json"
+    with open(analysis_path, "w", encoding="utf-8") as f:
+        json.dump(analysis, f, ensure_ascii=False, indent=2)
+    return analysis_path
 
 
 class LatestImageCaptureProcessor(FrameProcessor):
@@ -172,6 +184,16 @@ def get_capture_fingernail_tool() -> FunctionSchema:
     )
 
 
+def get_analyze_xray_tool() -> FunctionSchema:
+    """Tool to analyze the most recently uploaded chest X-ray."""
+    return FunctionSchema(
+        name="analyze_chest_xray",
+        description="Analyzes the most recently uploaded chest X-ray image for TB indicators.",
+        properties={},
+        required=[],
+    )
+
+
 transport_params = {
     "webrtc": lambda: TransportParams(
         audio_in_enabled=True,
@@ -203,6 +225,7 @@ async def run_bot(transport: BaseTransport, runner_args):
         capture_palm_tool = get_capture_palm_tool()
         capture_eye_tool = get_capture_eye_tool()
         capture_fingernail_tool = get_capture_fingernail_tool()
+        analyze_xray_tool = get_analyze_xray_tool()
 
         tools_schema = ToolsSchema(
             standard_tools=[
@@ -211,6 +234,7 @@ async def run_bot(transport: BaseTransport, runner_args):
                 capture_palm_tool,
                 capture_eye_tool,
                 capture_fingernail_tool,
+                analyze_xray_tool,
             ]
         )
 
@@ -249,6 +273,9 @@ CRITICAL RULES:
 - Verify that the fingernail occupies most of the camera view (around 80 percent) before calling capture_fingernail_photo
 - Only call capture_fingernail_photo when the nail is clearly visible and close up
 - After capture, confirm the photo was saved and provide the analysis result
+- If the user says they have a chest X-ray image or want X-ray analysis, ask them to upload the X-ray image
+- Only call analyze_chest_xray after an X-ray has been uploaded
+- After analyze_chest_xray returns, provide the analysis result
 
 IMPORTANT:
 - You are NOT a doctor - always recommend professional medical consultation
@@ -258,7 +285,7 @@ IMPORTANT:
 - Keep responses concise and natural-sounding
 """,
             tools=tools_schema,
-            function_call_timeout_secs=90.0,
+            function_call_timeout_secs=180.0,
         )
         print("LLM service created")
 
@@ -356,7 +383,10 @@ IMPORTANT:
                 result = await analyze_cough_file(file_path)
                 print(f"📋 Analysis result: {result}")
 
-                await params.result_callback(result)
+                analysis_path = save_analysis_json(file_path, result)
+                await params.result_callback(
+                    {**result, "analysis_path": analysis_path}
+                )
                 return
             if function_name == "capture_palm_photo":
                 global last_palm_file_path
@@ -404,8 +434,14 @@ IMPORTANT:
                 print(f"Calling palm anemia API for: {file_path}")
                 result = await analyze_palm_file(file_path)
                 print(f"Palm analysis result: {result}")
+                analysis_path = save_analysis_json(file_path, result)
                 await params.result_callback(
-                    {"status": "ok", "path": file_path, "analysis": result}
+                    {
+                        "status": "ok",
+                        "path": file_path,
+                        "analysis": result,
+                        "analysis_path": analysis_path,
+                    }
                 )
                 return
             elif function_name == "capture_eye_photo":
@@ -452,8 +488,14 @@ IMPORTANT:
                 print(f"Calling eye analysis API for: {file_path}")
                 result = await analyze_eye_file(file_path)
                 print(f"Eye analysis result: {result}")
+                analysis_path = save_analysis_json(file_path, result)
                 await params.result_callback(
-                    {"status": "ok", "path": file_path, "analysis": result}
+                    {
+                        "status": "ok",
+                        "path": file_path,
+                        "analysis": result,
+                        "analysis_path": analysis_path,
+                    }
                 )
                 return
             elif function_name == "capture_fingernail_photo":
@@ -500,8 +542,37 @@ IMPORTANT:
                 print(f"Calling nail analysis API for: {file_path}")
                 result = await analyze_nail_file(file_path)
                 print(f"Nail analysis result: {result}")
+                analysis_path = save_analysis_json(file_path, result)
                 await params.result_callback(
-                    {"status": "ok", "path": file_path, "analysis": result}
+                    {
+                        "status": "ok",
+                        "path": file_path,
+                        "analysis": result,
+                        "analysis_path": analysis_path,
+                    }
+                )
+                return
+            elif function_name == "analyze_chest_xray":
+                latest_path = get_latest_xray_path()
+                if not latest_path or not os.path.exists(latest_path):
+                    await params.result_callback(
+                        {
+                            "error": "No chest X-ray found. Please upload an X-ray image first."
+                        }
+                    )
+                    return
+
+                print(f"Calling chest X-ray API for: {latest_path}")
+                result = await analyze_xray_file(latest_path)
+                print(f"Chest X-ray analysis result: {result}")
+                analysis_path = save_analysis_json(latest_path, result)
+                await params.result_callback(
+                    {
+                        "status": "ok",
+                        "path": latest_path,
+                        "analysis": result,
+                        "analysis_path": analysis_path,
+                    }
                 )
                 return
 
@@ -522,6 +593,11 @@ IMPORTANT:
         # Register function handlers after context is set
         llm.register_function(
             "record_cough_sound",
+            handle_tool_calls,
+            cancel_on_interruption=False,
+        )
+        llm.register_function(
+            "analyze_chest_xray",
             handle_tool_calls,
             cancel_on_interruption=False,
         )
