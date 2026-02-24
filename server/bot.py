@@ -32,6 +32,7 @@ import sys
 
 sys.path.insert(0, "/home/sach/GEMINI_LIVE/server")
 from tb_audio_tool import analyze_cough_file, AudioCapture, save_audio_to_wav
+from palm_anemia_tool import analyze_palm_file
 
 logging.basicConfig(level=logging.INFO)
 load_dotenv()
@@ -50,6 +51,7 @@ bot_is_speaking = False
 got_user_track_audio = False
 latest_image_frame = None
 last_cough_file_path = None
+last_palm_file_path = None
 
 
 class LatestImageCaptureProcessor(FrameProcessor):
@@ -199,6 +201,7 @@ async def run_bot(transport: BaseTransport, runner_args):
         capture_palm_tool = get_capture_palm_tool()
         capture_eye_tool = get_capture_eye_tool()
         capture_fingernail_tool = get_capture_fingernail_tool()
+
         tools_schema = ToolsSchema(
             standard_tools=[
                 record_tool,
@@ -235,7 +238,7 @@ CRITICAL RULES:
 - Present the analysis result
 - If the user asks about their palm being normal or not, ask them to show their palm to the camera
 - Only call capture_palm_photo after you can clearly see a palm in the camera
-- After capture, confirm the photo was saved and proceed with a brief response
+- After capture, confirm the photo was saved and provide the analysis result
 - If the user asks about their eyes being pale, abnormal, itchy, not looking good, or reduced sight, ask them to come near the camera, remove any sunglasses or eyeglasses, and gently pull down the lower eyelid with their finger
 - Verify on camera that the lower eyelid is pulled down by their hand and the eye is clearly visible
 - Only call capture_eye_photo after you see the eye clearly and the lower eyelid is pulled down
@@ -253,6 +256,7 @@ IMPORTANT:
 - Keep responses concise and natural-sounding
 """,
             tools=tools_schema,
+            function_call_timeout_secs=30.0,
         )
         print("LLM service created")
 
@@ -352,7 +356,8 @@ IMPORTANT:
 
                 await params.result_callback(result)
                 return
-            elif function_name == "capture_palm_photo":
+            if function_name == "capture_palm_photo":
+                global last_palm_file_path
                 if latest_image_frame is None:
                     await params.result_callback(
                         {
@@ -373,7 +378,7 @@ IMPORTANT:
                 os.makedirs(capture_dir, exist_ok=True)
 
                 timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-                filename = f"{safe_label}_{timestamp}.jpg"
+                filename = f"{safe_label}_{timestamp}.png"
                 file_path = os.path.join(capture_dir, filename)
 
                 image_format = latest_image_frame.format or "RGB"
@@ -386,14 +391,20 @@ IMPORTANT:
                             latest_image_frame.size,
                             latest_image_frame.image,
                         )
-                    image.save(file_path, format="JPEG", quality=90)
+                    image.save(file_path, format="PNG")
                 except Exception as exc:
                     await params.result_callback(
                         {"error": f"Failed to save image: {exc}"}
                     )
                     return
 
-                await params.result_callback({"status": "ok", "path": file_path})
+                last_palm_file_path = file_path
+                print(f"Calling palm anemia API for: {file_path}")
+                result = await analyze_palm_file(file_path)
+                print(f"Palm analysis result: {result}")
+                await params.result_callback(
+                    {"status": "ok", "path": file_path, "analysis": result}
+                )
                 return
             elif function_name == "capture_eye_photo":
                 if latest_image_frame is None:
