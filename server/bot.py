@@ -33,6 +33,8 @@ import sys
 sys.path.insert(0, "/home/sach/GEMINI_LIVE/server")
 from tb_audio_tool import analyze_cough_file, AudioCapture, save_audio_to_wav
 from palm_anemia_tool import analyze_palm_file
+from eye_anemia_tool import analyze_eye_file
+from nail_anemia_tool import analyze_nail_file
 
 logging.basicConfig(level=logging.INFO)
 load_dotenv()
@@ -242,11 +244,11 @@ CRITICAL RULES:
 - If the user asks about their eyes being pale, abnormal, itchy, not looking good, or reduced sight, ask them to come near the camera, remove any sunglasses or eyeglasses, and gently pull down the lower eyelid with their finger
 - Verify on camera that the lower eyelid is pulled down by their hand and the eye is clearly visible
 - Only call capture_eye_photo after you see the eye clearly and the lower eyelid is pulled down
-- After capture, confirm the photo was saved and proceed with a brief response
+- After capture, confirm the photo was saved and provide the analysis result
 - If the user says their fingernail looks pale or less red, ask them to show one fingernail close to the camera
 - Verify that the fingernail occupies most of the camera view (around 80 percent) before calling capture_fingernail_photo
 - Only call capture_fingernail_photo when the nail is clearly visible and close up
-- After capture, confirm the photo was saved and proceed with a brief response
+- After capture, confirm the photo was saved and provide the analysis result
 
 IMPORTANT:
 - You are NOT a doctor - always recommend professional medical consultation
@@ -256,7 +258,7 @@ IMPORTANT:
 - Keep responses concise and natural-sounding
 """,
             tools=tools_schema,
-            function_call_timeout_secs=30.0,
+            function_call_timeout_secs=90.0,
         )
         print("LLM service created")
 
@@ -427,7 +429,7 @@ IMPORTANT:
                 os.makedirs(capture_dir, exist_ok=True)
 
                 timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-                filename = f"{safe_label}_{timestamp}.jpg"
+                filename = f"{safe_label}_{timestamp}.png"
                 file_path = os.path.join(capture_dir, filename)
 
                 image_format = latest_image_frame.format or "RGB"
@@ -440,14 +442,19 @@ IMPORTANT:
                             latest_image_frame.size,
                             latest_image_frame.image,
                         )
-                    image.save(file_path, format="JPEG", quality=90)
+                    image.save(file_path, format="PNG")
                 except Exception as exc:
                     await params.result_callback(
                         {"error": f"Failed to save image: {exc}"}
                     )
                     return
 
-                await params.result_callback({"status": "ok", "path": file_path})
+                print(f"Calling eye analysis API for: {file_path}")
+                result = await analyze_eye_file(file_path)
+                print(f"Eye analysis result: {result}")
+                await params.result_callback(
+                    {"status": "ok", "path": file_path, "analysis": result}
+                )
                 return
             elif function_name == "capture_fingernail_photo":
                 if latest_image_frame is None:
@@ -470,7 +477,7 @@ IMPORTANT:
                 os.makedirs(capture_dir, exist_ok=True)
 
                 timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-                filename = f"{safe_label}_{timestamp}.jpg"
+                filename = f"{safe_label}_{timestamp}.png"
                 file_path = os.path.join(capture_dir, filename)
 
                 image_format = latest_image_frame.format or "RGB"
@@ -483,14 +490,19 @@ IMPORTANT:
                             latest_image_frame.size,
                             latest_image_frame.image,
                         )
-                    image.save(file_path, format="JPEG", quality=90)
+                    image.save(file_path, format="PNG")
                 except Exception as exc:
                     await params.result_callback(
                         {"error": f"Failed to save image: {exc}"}
                     )
                     return
 
-                await params.result_callback({"status": "ok", "path": file_path})
+                print(f"Calling nail analysis API for: {file_path}")
+                result = await analyze_nail_file(file_path)
+                print(f"Nail analysis result: {result}")
+                await params.result_callback(
+                    {"status": "ok", "path": file_path, "analysis": result}
+                )
                 return
 
             await params.result_callback(
