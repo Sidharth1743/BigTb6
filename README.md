@@ -1,30 +1,37 @@
 # BigTB6
-BigTB6 is a multimodel voice driven preliminary TB screening system for detecting TB(Tuberculosis) with cough audio, palm/eye/nail imagery, heart and Respiratory Rate monitor and chest X‑ray analysis.
+# BigTB6
 
-## Deployed link : https://big-tb6.vercel.app/
+BigTB6 is a multimodal, voice-driven preliminary tuberculosis screening system. It integrates cough audio analysis, palm/eye/nail imagery, real-time heart and respiratory rate monitoring, and chest X-ray analysis into a unified diagnostic interface.
+
+**Deployed:** https://big-tb6.vercel.app/
+
+---
 
 ## Features
 
-- **Real-time Voice Conversation**: Talk to BigTB6 through your microphone
-- **Cough Analysis**: Record cough audio and get TB probability
-- **Palm Analysis**: Capture palm image and run anemia screening
-- **Eye Analysis**: Capture lower‑eyelid image and run anemia screening
-- **Fingernail Analysis**: Capture fingernail image and run anemia screening
-- **Chest X‑ray Analysis**: Upload X‑ray images and run TB screening
-- **WebRTC Streaming**: Low-latency audio/video communication
-- **Tool Integration**: Gemini Live function calling for multimodal tools
-- **Respiratory rate**: Real time Respiratory Rate monitoring by Webcam
-- **Insight Generation**: Finalized Report generation by each results
+- **Voice Conversation** — Real-time microphone-based interaction via WebRTC streaming
+- **Cough Analysis** — Record cough audio and receive TB probability scoring
+- **Chest X-ray Analysis** — Upload X-ray images for TB screening
+- **Palm Analysis** — Capture palm image for anemia screening
+- **Eye Analysis** — Capture lower-eyelid image for anemia screening
+- **Fingernail Analysis** — Capture fingernail image for anemia screening
+- **Respiratory Rate Monitor** — Real-time respiratory rate estimation via webcam
+- **Report Generation** — Consolidated diagnostic report synthesized from all modality results
+- **Tool Integration** — Gemini Live function calling for multimodal tool orchestration
 
-## HAI-DEF models 
+---
 
-Cough analysis : https://github.com/SACHokstack/Hear--Cough-Finetuning Open Weights : https://huggingface.co/sach3v/Domain_aware_dual_head_HEar
-Palm Analysis  : https://github.com/Sidharth1743/palm-medsiglip
-Nail Analysis  : https://github.com/Sidharth1743/Medsiglip-fingernail-finetune
-Eye Analysis   : https://github.com/Sidharth1743/medgemma-tb
-Fingernail Analysis : https://github.com/LE-TAPU-KOKO/nail-anemia-detection Open Weights : https://huggingface.co/JetX-GT/nail-anemia-detector
-Chest X‑ray Analysis : https://github.com/LE-TAPU-KOKO/CHRX-MLP-LINEAR_PROBE OpenWeights : https://huggingface.co/JetX-GT/hades-hellix-tb-linear-probe
-Respiratory Rate Monitor : https://github.com/Sidharth1743/HR-RR-detector
+## Models
+
+| Modality | Repository | Weights |
+|---|---|---|
+| Cough Analysis | [Hear-Cough-Finetuning](https://github.com/SACHokstack/Hear--Cough-Finetuning) | [sach3v/Domain_aware_dual_head_HEar](https://huggingface.co/sach3v/Domain_aware_dual_head_HEar) |
+| Palm Analysis | [palm-medsiglip](https://github.com/Sidharth1743/palm-medsiglip) | — |
+| Nail Analysis | [Medsiglip-fingernail-finetune](https://github.com/Sidharth1743/Medsiglip-fingernail-finetune) | — |
+| Eye Analysis | [medgemma-tb](https://github.com/Sidharth1743/medgemma-tb) | — |
+| Fingernail Anemia Detection | [nail-anemia-detection](https://github.com/LE-TAPU-KOKO/nail-anemia-detection) | [JetX-GT/nail-anemia-detector](https://huggingface.co/JetX-GT/nail-anemia-detector) |
+| Chest X-ray Analysis | [CHRX-MLP-LINEAR_PROBE](https://github.com/LE-TAPU-KOKO/CHRX-MLP-LINEAR_PROBE) | [JetX-GT/hades-hellix-tb-linear-probe](https://huggingface.co/JetX-GT/hades-hellix-tb-linear-probe) |
+| Respiratory Rate Monitor | [HR-RR-detector](https://github.com/Sidharth1743/HR-RR-detector) | — |
 ## Prerequisites
 
 - Python 3.12+
