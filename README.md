@@ -45,7 +45,17 @@ BigTb6 is structured across four layers:
 | Chest X-ray Analysis | [CHRX-MLP-LINEAR_PROBE](https://github.com/LE-TAPU-KOKO/CHRX-MLP-LINEAR_PROBE) | [JetX-GT/hades-hellix-tb-linear-probe](https://huggingface.co/JetX-GT/hades-hellix-tb-linear-probe) |
 | Respiratory Rate Monitor | [HR-RR-detector](https://github.com/Sidharth1743/HR-RR-detector) | — |
 
-## Cloud Run Deployments
+## Deployment
+
+### Web Application
+
+| Component | Platform | URL |
+|---|---|---|
+| Frontend (Next.js) | Vercel | https://big-tb6.vercel.app/ |
+| Backend API (`medbrain-api`) | Google Cloud Run | https://medbrain-api-1039179580375.us-central1.run.app |
+| Bot Service (`medbrain-bot`) | Google Cloud Run | https://medbrain-bot-1039179580375.us-central1.run.app |
+
+### Specialist Model APIs (Google Cloud Run)
 
 All specialist models are containerized and deployed on Google Cloud Run for scalable, unauthenticated access. Each service exposes a REST endpoint consumed by the MedGemma orchestrator.
 
