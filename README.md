@@ -1,21 +1,30 @@
-# TB Diagnostic Assistant - Gemini Live
+# BigTB6
+BigTB6 is a multimodel voice driven preliminary TB screening system for detecting TB(Tuberculosis) with cough audio, palm/eye/nail imagery, heart and Respiratory Rate monitor and chest X‑ray analysis.
 
-A real-time multimodal AI health companion using Google's Gemini Live API for TB (Tuberculosis) screening with cough audio, palm/eye/nail imagery, and chest X‑ray analysis.
-
-# Deployed link : https://big-tb6.vercel.app/
+## Deployed link : https://big-tb6.vercel.app/
 
 ## Features
 
-- **Real-time Voice Conversation**: Talk to Dr. AI through your microphone
-- **Cough Analysis**: Record cough audio and get TB probability via external API
+- **Real-time Voice Conversation**: Talk to BigTB6 through your microphone
+- **Cough Analysis**: Record cough audio and get TB probability
 - **Palm Analysis**: Capture palm image and run anemia screening
 - **Eye Analysis**: Capture lower‑eyelid image and run anemia screening
 - **Fingernail Analysis**: Capture fingernail image and run anemia screening
 - **Chest X‑ray Analysis**: Upload X‑ray images and run TB screening
 - **WebRTC Streaming**: Low-latency audio/video communication
 - **Tool Integration**: Gemini Live function calling for multimodal tools
-- **Saved Outputs**: Media and analysis JSON files are saved alongside captures
+- **Respiratory rate**: Real time Respiratory Rate monitoring by Webcam
+- **Insight Generation**: Finalized Report generation by each results
 
+## HAI-DEF models 
+
+Cough analysis : https://github.com/SACHokstack/Hear--Cough-Finetuning Open Weights : https://huggingface.co/sach3v/Domain_aware_dual_head_HEar
+Palm Analysis  : https://github.com/Sidharth1743/palm-medsiglip
+Nail Analysis  : https://github.com/Sidharth1743/Medsiglip-fingernail-finetune
+Eye Analysis   : https://github.com/Sidharth1743/medgemma-tb
+Fingernail Analysis : https://github.com/LE-TAPU-KOKO/nail-anemia-detection Open Weights : https://huggingface.co/JetX-GT/nail-anemia-detector
+Chest X‑ray Analysis : https://github.com/LE-TAPU-KOKO/CHRX-MLP-LINEAR_PROBE OpenWeights : https://huggingface.co/JetX-GT/hades-hellix-tb-linear-probe
+Respiratory Rate Monitor : https://github.com/Sidharth1743/HR-RR-detector
 ## Prerequisites
 
 - Python 3.12+
