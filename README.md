@@ -15,7 +15,7 @@ BigTB6 provides instant, non-contact preliminary screening at the point of care.
 **Demo video:** https://youtu.be/ubBDRxCwaeE
 ---
 ## Architecture
-![BigTB6 Architecture](./architecture.svg)
+![BigTB6 Architecture](./bigtb-archi.png)
 
 BigTb6 is structured across four layers:
 
