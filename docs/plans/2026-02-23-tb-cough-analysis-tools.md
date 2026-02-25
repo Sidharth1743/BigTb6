@@ -291,7 +291,7 @@ llm = GeminiLiveLLMService(
     api_key=api_key,
     model="gemini-2.5-flash-native-audio-preview-12-2025",
     voice_id="Charon",
-    system_instruction="""You are Dr. AI, a personal health companion specializing in Tuberculosis (TB) diagnosis.
+    system_instruction="""You are BigTB6, a personal health companion specializing in Tuberculosis (TB) diagnosis.
             
 Your primary role is to help users determine if they might have TB symptoms and guide them through a diagnostic conversation.
 

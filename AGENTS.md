@@ -8,6 +8,7 @@
  - Palm analysis flow: `capture_palm_photo` is the only tool. It saves a PNG and immediately calls `analyze_palm_file()` internally, returning the analysis in the same tool response (no separate analysis tool call).
  - Eye analysis flow: `capture_eye_photo` saves a PNG and immediately calls `analyze_eye_file()` (single tool response).
  - Nail analysis flow: `capture_fingernail_photo` saves a PNG and immediately calls `analyze_nail_file()` (single tool response, API expects form field `image`).
+ - Completion tracking: after a successful cough or palm/eye/nail analysis, the bot prompts the next uncompleted check only.
 
 ## Build, Test, and Development Commands
 - Backend (run bot):
