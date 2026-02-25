@@ -136,7 +136,7 @@ npm run dev
 | `capture_fingernail_photo` | Captures fingernail image and returns analysis |
 | `analyze_chest_xray` | Analyzes most recently uploaded chest X‑ray |
 
-### Architecture
+### Backend Architecture
 
 ```
 ┌─────────────┐     WebRTC      ┌─────────────┐
@@ -180,47 +180,6 @@ GEMINI_LIVE/
 ├── docs/                  # Documentation
 │   └── plans/            # Implementation plans
 └── pipecat/              # Custom Pipecat fork
-```
-
-## Saved Outputs
-
-- Cough: `server/cough_samples/*.wav` and `*_analysis.json`
-- Palm: `server/palm_captures/*.png` and `*_analysis.json`
-- Eye: `server/eye_images/*.png` and `*_analysis.json`
-- Nail: `server/fingernail_images/*.png` and `*_analysis.json`
-- X‑ray: `server/xray_images/*` and `*_analysis.json`
-
-## Troubleshooting
-
-### Port Already in Use
-
-If you get "address already in use", specify a different port:
-
-```bash
-# Backend
-./venv/bin/python bot.py -t webrtc --host localhost --port 7861
-```
-
-### Microphone Not Working
-
-1. Grant microphone permissions in browser
-2. Click "Enable Audio" button if audio doesn't play
-3. Use headphones to prevent audio feedback
-
-### API Key Errors
-
-Ensure your `.env` file is correctly configured:
-- No quotes around values
-- No spaces around `=`
-- Keys are correct (GOOGLE_API_KEY, DAILY_API_KEY)
-
-## Development
-
-### Running Tests
-
-```bash
-cd server
-./venv/bin/python -m pytest tests/
 ```
 
 ### Customizing the Bot
