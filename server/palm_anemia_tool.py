@@ -5,7 +5,10 @@ from typing import Dict, Any
 
 import aiohttp
 
-PALM_API_URL = "https://palm-anemia-1039179580375.us-central1.run.app/predict"
+PALM_API_URL = os.getenv(
+    "PALM_API_URL",
+    "https://palm-anemia-1039179580375.us-central1.run.app/predict",
+)
 
 
 async def analyze_palm_file(file_path: str) -> Dict[str, Any]:

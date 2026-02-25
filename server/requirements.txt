@@ -1,6 +1,11 @@
 pipecat-ai[google,webrtc]
+pipecat-ai-small-webrtc-prebuilt
 python-dotenv
 fastapi
-uvicorn
+uvicorn[standard]
 aiohttp
-pipecat-ai-small-webrtc-prebuilt
+requests
+python-multipart
+Pillow
+numpy
+scipy

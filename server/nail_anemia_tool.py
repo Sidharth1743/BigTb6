@@ -6,7 +6,10 @@ from typing import Any, Dict
 import aiohttp
 
 
-NAIL_API_URL = "https://nail-anemia-1039179580375.us-central1.run.app/predict"
+NAIL_API_URL = os.getenv(
+    "NAIL_API_URL",
+    "https://nail-anemia-1039179580375.us-central1.run.app/predict",
+)
 
 
 async def analyze_nail_file(file_path: str) -> Dict[str, Any]:

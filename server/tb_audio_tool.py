@@ -8,7 +8,10 @@ import aiohttp
 from typing import Dict, Any
 
 
-TB_API_URL = "https://hear-tb-1039179580375.us-central1.run.app/predict"
+TB_API_URL = os.getenv(
+    "TB_API_URL",
+    "https://hear-tb-1039179580375.us-central1.run.app/predict",
+)
 
 
 def save_audio_to_wav(audio_data: bytes, sample_rate: int, file_path: str) -> str:

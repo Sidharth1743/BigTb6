@@ -6,7 +6,10 @@ from typing import Any, Dict
 import aiohttp
 
 
-XRAY_API_URL = "https://chest-xray-1039179580375.us-central1.run.app/analyze-tb"
+XRAY_API_URL = os.getenv(
+    "XRAY_API_URL",
+    "https://chest-xray-1039179580375.us-central1.run.app/analyze-tb",
+)
 
 
 async def analyze_xray_file(file_path: str) -> Dict[str, Any]:

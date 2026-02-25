@@ -40,6 +40,9 @@ from chest_xray_tool import analyze_xray_file
 from xray_store import get_latest_xray_path
 
 logging.basicConfig(level=logging.INFO)
+
+# Suppress aiortc VP8 decoder warnings (common WebRTC video codec issue)
+logging.getLogger("aiortc.codecs.vpx").setLevel(logging.ERROR)
 load_dotenv()
 
 api_key = os.getenv("GOOGLE_API_KEY", "")
@@ -57,6 +60,39 @@ got_user_track_audio = False
 latest_image_frame = None
 last_cough_file_path = None
 last_palm_file_path = None
+is_xray_analysis_running = False
+is_eye_analysis_running = False
+completed_checks = {"palm": False, "eye": False, "nail": False, "cough": False}
+
+
+def next_pending_check():
+    for key in ["palm", "eye", "nail"]:
+        if not completed_checks.get(key, False):
+            return key
+    return None
+
+
+async def prompt_next_check(task: PipelineTask):
+    pending = next_pending_check()
+    if not pending:
+        return
+    prompts = {
+        "palm": "Would you like to check your palm for anemia? If yes, please show your palm to the camera.",
+        "eye": "Would you like to check your eye for anemia? If yes, come closer and gently pull down your lower eyelid.",
+        "nail": "Would you like to check your fingernail for anemia? If yes, show one nail close to the camera.",
+    }
+    await task.queue_frames(
+        [
+            LLMMessagesAppendFrame(
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompts[pending],
+                    }
+                ]
+            )
+        ]
+    )
 
 
 def save_analysis_json(source_path: str, analysis: dict) -> str:
@@ -242,53 +278,61 @@ async def run_bot(transport: BaseTransport, runner_args):
             api_key=api_key,
             model="gemini-2.5-flash-native-audio-preview-12-2025",
             voice_id="Charon",
-            system_instruction="""You are Dr. AI, a personal health companion specializing in Tuberculosis (TB) diagnosis.
-            
-Your primary role is to help users determine if they might have TB symptoms and guide them through a diagnostic conversation.
+            system_instruction="""You are BigTBAI, a friendly and professional health companion for the Gemini Live Medical Diagnostics platform.
 
-CONVERSATION FLOW:
-1. GREETING: As soon as the user connects, warmly greet them and introduce yourself.
-2. Ask: "How are you feeling today? Do you have any health concerns?"
-3. If user mentions COUGH or wants cough analysis:
-   - IMMEDIATELY call the record_cough_sound tool
-   - Tell the user to cough for about 5 seconds
-   - WAIT for a follow-up message that says the recording is complete
-   - Only then call analyze_cough_for_tb (no arguments needed - it has the recording)
-   - Present the TB probability result to the user
+Your main goal is to have a natural, empathetic conversation about the user's health concerns and guide them toward appropriate care. This is a comprehensive screening platform that analyzes multiple health indicators—including cough sounds for TB assessment and eye/palm/nail images for anemia detection—providing a thorough health evaluation experience.
 
-CRITICAL RULES:
-- When user mentions cough, call record_cough_sound tool IMMEDIATELY
-- After record_cough_sound returns, tell user to cough
-- Wait about 5 seconds for user to cough
+CONVERSATION STYLE:
+- Be warm, friendly, and conversational
+- Show genuine concern for the user's wellbeing
+- Listen actively to what the user says
+- Respond naturally and ask thoughtful follow-up questions
+- Keep responses concise and easy to understand
+
+HEALTH ASSESSMENT APPROACH:
+- Ask about specific symptoms: "How long have you been experiencing this?", "Is it getting better or worse?"
+- Show empathy: "That sounds concerning", "I understand how worrying this must be"
+- Gather context: "Have you had any fever?", "Are you experiencing any other symptoms?"
+- After the cough discussion, explain that the platform also checks eye, palm, and fingernail appearance for anemia indicators, and guide the user to show those body parts on camera if anything seems unusual.
+
+ABOUT TB ANALYSIS:
+- You can help assess TB risk by analyzing cough sounds using AI-powered audio analysis
+- When users mention cough, I have cough , I have cough for some time or few days or  someday, fever, analyze my cough ,weight loss, or night sweats, you can mention: "I can analyze your cough to help assess TB risk if you'd like"- Then ask: "Are you ready to start?"
+- Only start recording after explicit readiness from the user
+- Accept readiness phrases like: "I'm ready", "yes", "go on", "grab it", "ready to cough", "start", "ok", "sure", "do it"
+- If you asked "Are you ready to start?" and the user answers "yes", treat it as readiness and call record_cough_sound immediately
+
+PROACTIVE ANEMIA SCREENING:
+- ACTIVELY ask users about fatigue, weakness, dizziness, or paleness
+- If they mention ANY of these symptoms, offer anemia screening: "Those symptoms could indicate anemia. I can analyze your eye, palm, or fingernail images to check for anemia indicators. Would you like me to do that?"
+- Use these EXACT trigger phrases when users want analysis:
+  * "analyze eye for anemia" - for eye analysis
+  * "analyze palm for anemia" - for palm analysis
+  * "analyze nail for anemia" - for nail analysis
+  * "comprehensive anemia screening" - for all three analyses
+
+INTEGRATED SCREENING APPROACH:
+- Explain that the platform provides comprehensive screening by checking multiple health indicators
+- After cough analysis, suggest anemia screening as a complementary health check
+- Mention that combining results from different analyses gives a more complete health picture
+- Use comprehensive analysis when the user wants a complete health screening
+
+TOOL RULES:
+- When the user says they are ready (e.g., "I'm ready", "yes", "go on", "grab it", "ready to cough", "start", "ok", "sure", "do it"), call record_cough_sound immediately
+- After record_cough_sound returns, tell user to cough and wait ~5 seconds
 - Do NOT call analyze_cough_for_tb until you receive a message saying the recording is complete
-- Present the analysis result
-- If the user asks about their palm being normal or not, ask them to show their palm to the camera
-- Only call capture_palm_photo after you can clearly see a palm in the camera
-- If the user explicitly asks to take/capture the photo (e.g., "take it now"), call capture_palm_photo immediately
-- After capture, confirm the photo was saved and provide the analysis result
-- Do not say you are unable to take photos. If asked to take a photo, proceed with the capture tool or ask for a clearer view.
-- If the user asks about their eyes being pale, abnormal, itchy, not looking good, or reduced sight, ask them to come near the camera, remove any sunglasses or eyeglasses, and gently pull down the lower eyelid with their finger
-- Verify on camera that the lower eyelid is pulled down by their hand and the eye is clearly visible
-- Only call capture_eye_photo after you see the eye clearly and the lower eyelid is pulled down
-- If the user explicitly asks to take/capture the photo (e.g., "take it now"), call capture_eye_photo immediately
-- After capture, confirm the photo was saved and provide the analysis result
-- Do not say you are unable to take photos. If asked to take a photo, proceed with the capture tool or ask for a clearer view.
-- If the user says their fingernail looks pale or less red, ask them to show one fingernail close to the camera
-- Verify that the fingernail occupies most of the camera view (around 80 percent) before calling capture_fingernail_photo
-- Only call capture_fingernail_photo when the nail is clearly visible and close up
-- If the user explicitly asks to take/capture the photo (e.g., "take it now"), call capture_fingernail_photo immediately
-- After capture, confirm the photo was saved and provide the analysis result
-- Do not say you are unable to take photos. If asked to take a photo, proceed with the capture tool or ask for a clearer view.
-- If the user says they have a chest X-ray image or want X-ray analysis, ask them to upload the X-ray image
-- Only call analyze_chest_xray after an X-ray has been uploaded
-- After analyze_chest_xray returns, provide the analysis result
+- If the palm is visible and the user says they are showing it, call capture_palm_photo immediately
+- If the palm looks aligned in frame, capture it
+- If the eye is visible and the user says they are showing it, call capture_eye_photo immediately
+- If the fingernail is visible and the user says they are showing it, call capture_fingernail_photo immediately
+- If the user confirms X-ray upload, call analyze_chest_xray immediately and do not speak before calling it
 
 IMPORTANT:
-- You are NOT a doctor - always recommend professional medical consultation
-- Never prescribe medication
-- Handle sensitive health information with care
+- You are NOT a doctor—always recommend professional medical consultation
+- Never prescribe medication or give definitive diagnoses
 - Your output will be spoken aloud, so avoid special characters and emojis
-- Keep responses concise and natural-sounding
+- Always end with supportive guidance: "Please consult with a healthcare professional for proper diagnosis and treatment"
+- Explain that all analyses use AI technology and have limitations—professional medical diagnosis is essential
 """,
             tools=tools_schema,
             function_call_timeout_secs=180.0,
@@ -393,6 +437,9 @@ IMPORTANT:
                 await params.result_callback(
                     {**result, "analysis_path": analysis_path}
                 )
+                if not result.get("error"):
+                    completed_checks["cough"] = True
+                    await prompt_next_check(task)
                 return
             if function_name == "capture_palm_photo":
                 global last_palm_file_path
@@ -441,6 +488,20 @@ IMPORTANT:
                 result = await analyze_palm_file(file_path)
                 print(f"Palm analysis result: {result}")
                 analysis_path = save_analysis_json(file_path, result)
+                if not result.get("error"):
+                    completed_checks["palm"] = True
+                await task.queue_frames(
+                    [
+                        LLMMessagesAppendFrame(
+                            messages=[
+                                {
+                                    "role": "user",
+                                    "content": "Photo captured. Analyzing now. I will report the result soon.",
+                                }
+                            ]
+                        )
+                    ]
+                )
                 await params.result_callback(
                     {
                         "status": "ok",
@@ -449,12 +510,15 @@ IMPORTANT:
                         "analysis_path": analysis_path,
                     }
                 )
+                if not result.get("error"):
+                    await prompt_next_check(task)
                 return
             elif function_name == "capture_eye_photo":
+                global is_eye_analysis_running
                 if latest_image_frame is None:
                     await params.result_callback(
                         {
-                            "error": "No camera frame available. Please show your eye to the camera."
+                            "error": "I can’t see your eye clearly. Please come closer, remove any glasses, and gently pull down the lower eyelid so it fills most of the frame."
                         }
                     )
                     return
@@ -495,14 +559,20 @@ IMPORTANT:
                 result = await analyze_eye_file(file_path)
                 print(f"Eye analysis result: {result}")
                 analysis_path = save_analysis_json(file_path, result)
+                if not result.get("error"):
+                    completed_checks["eye"] = True
+
                 await params.result_callback(
                     {
                         "status": "ok",
                         "path": file_path,
                         "analysis": result,
                         "analysis_path": analysis_path,
+                        "message": "Photo captured. Analyzing now.",
                     }
                 )
+                if not result.get("error"):
+                    await prompt_next_check(task)
                 return
             elif function_name == "capture_fingernail_photo":
                 if latest_image_frame is None:
@@ -549,6 +619,8 @@ IMPORTANT:
                 result = await analyze_nail_file(file_path)
                 print(f"Nail analysis result: {result}")
                 analysis_path = save_analysis_json(file_path, result)
+                if not result.get("error"):
+                    completed_checks["nail"] = True
                 await params.result_callback(
                     {
                         "status": "ok",
@@ -557,8 +629,11 @@ IMPORTANT:
                         "analysis_path": analysis_path,
                     }
                 )
+                if not result.get("error"):
+                    await prompt_next_check(task)
                 return
             elif function_name == "analyze_chest_xray":
+                global is_xray_analysis_running
                 latest_path = get_latest_xray_path()
                 if not latest_path or not os.path.exists(latest_path):
                     await params.result_callback(
@@ -567,19 +642,58 @@ IMPORTANT:
                         }
                     )
                     return
+                if is_xray_analysis_running:
+                    await params.result_callback(
+                        {"status": "processing", "message": "Chest X-ray analysis is already in progress."}
+                    )
+                    return
 
-                print(f"Calling chest X-ray API for: {latest_path}")
-                result = await analyze_xray_file(latest_path)
-                print(f"Chest X-ray analysis result: {result}")
-                analysis_path = save_analysis_json(latest_path, result)
+                is_xray_analysis_running = True
+
+                # Return immediately without triggering LLM response
+                props = FunctionCallResultProperties(run_llm=False)
                 await params.result_callback(
                     {
-                        "status": "ok",
-                        "path": latest_path,
-                        "analysis": result,
-                        "analysis_path": analysis_path,
-                    }
+                        "status": "processing",
+                        "message": "Chest X-ray analysis has started. Results will be provided when ready.",
+                    },
+                    properties=props,
                 )
+
+                async def run_xray_analysis():
+                    global is_xray_analysis_running
+                    try:
+                        print(f"Calling chest X-ray API for: {latest_path}")
+                        result = await analyze_xray_file(latest_path)
+                        print(f"Chest X-ray analysis result: {result}")
+                        analysis_path = save_analysis_json(latest_path, result)
+
+                        await task.queue_frames(
+                            [
+                                LLMMessagesAppendFrame(
+                                    messages=[
+                                        {
+                                            "role": "user",
+                                            "content": (
+                                                "Chest X-ray result JSON: "
+                                                + json.dumps(
+                                                    {
+                                                        "analysis": result,
+                                                        "analysis_path": analysis_path,
+                                                    },
+                                                    ensure_ascii=False,
+                                                )
+                                                + ". Use only this data."
+                                            ),
+                                        }
+                                    ]
+                                )
+                            ]
+                        )
+                    finally:
+                        is_xray_analysis_running = False
+
+                asyncio.create_task(run_xray_analysis())
                 return
 
             await params.result_callback(
@@ -750,7 +864,7 @@ IMPORTANT:
                         messages=[
                             {
                                 "role": "user",
-                                "content": "Say exactly this to the user: Hello! I'm Dr. AI, your personal health companion. I'm here to help you assess your health today. How are you feeling?",
+                                "content": "Say exactly this to the user: Hello! I'm BigTB6, your personal health companion. I'm here to help you assess your health today. How are you feeling?",
                             }
                         ]
                     )

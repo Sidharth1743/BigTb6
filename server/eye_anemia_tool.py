@@ -6,7 +6,10 @@ from typing import Any, Dict
 import aiohttp
 
 
-EYE_API_URL = "https://respira-medsiglip-1039179580375.us-central1.run.app/predict"
+EYE_API_URL = os.getenv(
+    "EYE_API_URL",
+    "https://respira-medsiglip-1039179580375.us-central1.run.app/predict",
+)
 
 
 async def analyze_eye_file(file_path: str) -> Dict[str, Any]:
