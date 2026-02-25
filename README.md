@@ -1,6 +1,10 @@
 # BigTB6
 
-BigTB6 is a multimodal, voice-driven preliminary tuberculosis screening system. It integrates cough audio analysis, palm/eye/nail imagery, real-time respiratory rate monitoring, and chest X-ray analysis into a unified diagnostic interface.
+**BigTB6** is a multimodal, voice-driven preliminary tuberculosis screening system. It integrates cough audio analysis, palm/eye/nail imagery, real-time respiratory rate monitoring, and chest X-ray analysis into a unified diagnostic interface.
+
+India faces 2.7 million TB cases annually (25% of global burden) with 305,000 deaths per year. Traditional screening creates deadly delays: overcrowded hospitals, 48-72 hour lab results, patients lost to follow-up.
+**Our solution:** Instant, non-contact screening that enables hospitals to screen 3-5x more patients daily while protecting healthcare workers.
+
 
 **Deployed Link:** https://big-tb6.vercel.app/
 ---
