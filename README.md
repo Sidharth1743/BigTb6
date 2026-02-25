@@ -2,8 +2,8 @@
 
 BigTB6 is a multimodal, voice-driven preliminary tuberculosis screening system. It integrates cough audio analysis, palm/eye/nail imagery, real-time respiratory rate monitoring, and chest X-ray analysis into a unified diagnostic interface.
 
-**Deployed:** https://big-tb6.vercel.app/
-
+**Deployed Link:** https://big-tb6.vercel.app/
+**Demo video:** https://youtu.be/ubBDRxCwaeE?si=Qhmsw11RnrE3HNZH
 ---
 ## Architecture
 ![BigTB6 Architecture](./architecture.svg)
@@ -43,6 +43,19 @@ BigTb6 is structured across four layers:
 | Fingernail Anemia Detection | [nail-anemia-detection](https://github.com/LE-TAPU-KOKO/nail-anemia-detection) | [JetX-GT/nail-anemia-detector](https://huggingface.co/JetX-GT/nail-anemia-detector) |
 | Chest X-ray Analysis | [CHRX-MLP-LINEAR_PROBE](https://github.com/LE-TAPU-KOKO/CHRX-MLP-LINEAR_PROBE) | [JetX-GT/hades-hellix-tb-linear-probe](https://huggingface.co/JetX-GT/hades-hellix-tb-linear-probe) |
 | Respiratory Rate Monitor | [HR-RR-detector](https://github.com/Sidharth1743/HR-RR-detector) | — |
+
+## Cloud Run Deployments
+
+All specialist models are containerized and deployed on Google Cloud Run for scalable, unauthenticated access. Each service exposes a REST endpoint consumed by the MedGemma orchestrator.
+
+| Service | Endpoint | Method | Route |
+|---|---|---|---|
+| Cough Analysis (HeAR TB) | `https://hear-tb-1039179580375.us-central1.run.app` | POST | `/predict` |
+| Chest X-ray (Hades Hellix) | `https://chest-xray-1039179580375.us-central1.run.app` | POST | `/analyze-tb` |
+| Palm Anemia | `https://palm-anemia-1039179580375.us-central1.run.app` | POST | `/predict` |
+| Nail Anemia | `https://nail-anemia-1039179580375.us-central1.run.app` | POST | `/predict` |
+| Respiratory Rate (Respira-Sense) | `https://respira-medsiglip-1039179580375.us-central1.run.app` | POST | `/predict` |
+
 
 ## Prerequisites
 
