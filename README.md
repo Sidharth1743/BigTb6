@@ -2,6 +2,8 @@
 
 A real-time multimodal AI health companion using Google's Gemini Live API for TB (Tuberculosis) screening with cough audio, palm/eye/nail imagery, and chest X‑ray analysis.
 
+# Deployed link : https://big-tb6.vercel.app/
+
 ## Features
 
 - **Real-time Voice Conversation**: Talk to Dr. AI through your microphone
