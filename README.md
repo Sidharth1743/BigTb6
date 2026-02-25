@@ -1,11 +1,22 @@
 # BigTB6
-# BigTB6
 
-BigTB6 is a multimodal, voice-driven preliminary tuberculosis screening system. It integrates cough audio analysis, palm/eye/nail imagery, real-time heart and respiratory rate monitoring, and chest X-ray analysis into a unified diagnostic interface.
+BigTB6 is a multimodal, voice-driven preliminary tuberculosis screening system. It integrates cough audio analysis, palm/eye/nail imagery, real-time respiratory rate monitoring, and chest X-ray analysis into a unified diagnostic interface.
 
 **Deployed:** https://big-tb6.vercel.app/
 
 ---
+## Architecture
+![BigTB6 Architecture](./architecture.svg)
+
+BigTb6 is structured across four layers:
+
+1. **Interaction Layer — Gemini Live**: Handles all real-time voice communication with the user over WebRTC. It is multilingual and uses function calling to invoke the appropriate screening tools based on the conversation context.
+
+2. **Orchestration Layer — MedGemma**: Acts as the clinical reasoning core. Once all modality-specific models return their results, MedGemma aggregates the outputs, interprets them in context, and generates a consolidated preliminary diagnostic report with risk indicators and recommendations.
+
+3. **Specialist Model Layer**: A set of independently fine-tuned models, each responsible for a single screening modality (see table below). They are invoked by the orchestrator as needed.
+
+4. **Output Layer**: The final report is synthesized by MedGemma and delivered back to the user through Gemini Live as a voice response.
 
 ## Features
 
@@ -32,6 +43,7 @@ BigTB6 is a multimodal, voice-driven preliminary tuberculosis screening system. 
 | Fingernail Anemia Detection | [nail-anemia-detection](https://github.com/LE-TAPU-KOKO/nail-anemia-detection) | [JetX-GT/nail-anemia-detector](https://huggingface.co/JetX-GT/nail-anemia-detector) |
 | Chest X-ray Analysis | [CHRX-MLP-LINEAR_PROBE](https://github.com/LE-TAPU-KOKO/CHRX-MLP-LINEAR_PROBE) | [JetX-GT/hades-hellix-tb-linear-probe](https://huggingface.co/JetX-GT/hades-hellix-tb-linear-probe) |
 | Respiratory Rate Monitor | [HR-RR-detector](https://github.com/Sidharth1743/HR-RR-detector) | — |
+
 ## Prerequisites
 
 - Python 3.12+
@@ -107,7 +119,7 @@ npm run dev
 
 ### Conversation Flow
 
-1. **Greeting**: Dr. AI introduces itself and asks how you're feeling
+1. **Greeting**: BigTB6 introduces itself and asks how you're feeling
 2. **Symptom Inquiry**: Ask questions about TB-related symptoms
 3. **Cough Analysis**: When you mention a cough, the bot records and analyzes the cough audio
 4. **Palm/Eye/Nail Analysis**: When you mention these concerns, the bot captures an image and returns an analysis in the same tool call
