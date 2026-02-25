@@ -46,7 +46,7 @@ BigTb6 is structured across four layers:
 | Modality | Repository | Weights |
 |---|---|---|
 | Cough Analysis | [Hear-Cough-Finetuning](https://github.com/SACHokstack/Hear--Cough-Finetuning) | [sach3v/Domain_aware_dual_head_HEar](https://huggingface.co/sach3v/Domain_aware_dual_head_HEar) |
-| Palm Analysis | [palm-medsiglip](https://github.com/Sidharth1743/palm-medsiglip) | — |
+| Palm Analysis | [palm-medsiglip](https://github.com/Sidharth1743/palm-medsiglip) | [Sidharth1743/palm-medsiglip-linear-probe](https://huggingface.co/Sidharth1743/palm-medsiglip-linear-probe) |
 | Nail Analysis | [Medsiglip-fingernail-finetune](https://github.com/Sidharth1743/Medsiglip-fingernail-finetune) | — |
 | Eye Analysis | [medgemma-tb](https://github.com/Sidharth1743/medgemma-tb) | — |
 | Fingernail Anemia Detection | [nail-anemia-detection](https://github.com/LE-TAPU-KOKO/nail-anemia-detection) | [JetX-GT/nail-anemia-detector](https://huggingface.co/JetX-GT/nail-anemia-detector) |
