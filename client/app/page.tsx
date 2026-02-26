@@ -94,6 +94,18 @@ export default function Home() {
     }
   }, []);
 
+  const attachRemoteAudioTrack = useCallback((track: MediaStreamTrack) => {
+    const stream = new MediaStream([track]);
+    setRemoteStream(stream);
+    if (botAudioRef.current) {
+      botAudioRef.current.srcObject = stream;
+      botAudioRef.current
+        .play()
+        .then(() => setNeedsAudioGesture(false))
+        .catch(() => setNeedsAudioGesture(true));
+    }
+  }, []);
+
   const startSession = async () => {
     if (callObjectRef.current) return;
     if (connectionStatus === 'connected' || connectionStatus === 'connecting') return;
@@ -126,7 +138,9 @@ export default function Home() {
         throw new Error('Failed to start bot');
       }
 
-      const callObject = DailyIframe.createCallObject();
+      const callObject = DailyIframe.createCallObject({
+        subscribeToTracksAutomatically: true,
+      });
       callObjectRef.current = callObject;
 
       callObject.on('joining-meeting', (event) => {
@@ -177,7 +191,13 @@ export default function Home() {
       callObject.on('participant-joined', updateMediaStreams);
       callObject.on('participant-updated', updateMediaStreams);
       callObject.on('participant-left', updateMediaStreams);
-      callObject.on('track-started', updateMediaStreams);
+      callObject.on('track-started', (event: any) => {
+        console.log('Daily track-started', event);
+        const track = event?.track;
+        const participant = event?.participant;
+        if (!track || track.kind !== 'audio' || participant?.local) return;
+        attachRemoteAudioTrack(track);
+      });
       callObject.on('track-stopped', updateMediaStreams);
 
       await callObject.join({ url: roomUrl, token });
