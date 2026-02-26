@@ -12,6 +12,7 @@ type DailyParticipant = {
   local?: boolean;
   tracks?: {
     audio?: { state?: string; persistentTrack?: MediaStreamTrack | null };
+    customAudio?: { state?: string; persistentTrack?: MediaStreamTrack | null };
     video?: { state?: string; persistentTrack?: MediaStreamTrack | null };
   };
 };
