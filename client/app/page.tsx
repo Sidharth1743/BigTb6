@@ -86,15 +86,7 @@ export default function Home() {
       remoteAudio: remoteAudio?.state,
       remoteCustomAudio: remoteCustomAudio?.state,
     });
-    if (remoteParticipantId && (remoteAudio?.state || remoteCustomAudio?.state)) {
-      try {
-        callObject.updateParticipant(remoteParticipantId, {
-          setSubscribedTracks: { audio: true, video: false },
-        });
-      } catch (error) {
-        console.error('Failed to set subscribed tracks', error);
-      }
-    }
+    void remoteParticipantId;
     const chosenTrack =
       remoteAudio?.state === 'playable'
         ? remoteAudio?.persistentTrack
@@ -219,16 +211,6 @@ export default function Home() {
 
       callObject.on('participant-joined', (event: any) => {
         console.log('Daily participant-joined', event);
-        const participantId = event?.participant?.participantId ?? event?.participant?.id;
-        if (participantId) {
-          try {
-            callObject.updateParticipant(participantId, {
-              setSubscribedTracks: { audio: true, video: false },
-            });
-          } catch (error) {
-            console.error('Failed to subscribe to participant', error);
-          }
-        }
         updateMediaStreams();
       });
       callObject.on('participant-updated', updateMediaStreams);
@@ -256,6 +238,16 @@ export default function Home() {
       callObject.on('track-stopped', updateMediaStreams);
 
       await callObject.join({ url: roomUrl, token });
+      try {
+        callObject.setSubscribedTracks({
+          audio: true,
+          video: false,
+          screenAudio: true,
+          screenVideo: false,
+        });
+      } catch (error) {
+        console.error('Failed to set subscribed tracks', error);
+      }
       await callObject.setLocalAudio(micEnabled);
       await callObject.setLocalVideo(cameraEnabled);
       try {
