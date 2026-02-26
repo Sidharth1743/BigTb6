@@ -99,6 +99,9 @@ export default function Home() {
     setRemoteStream(stream);
     if (botAudioRef.current) {
       botAudioRef.current.srcObject = stream;
+      botAudioRef.current.muted = false;
+      botAudioRef.current.volume = 1;
+      setNeedsAudioGesture(true);
       botAudioRef.current
         .play()
         .then(() => setNeedsAudioGesture(false))
