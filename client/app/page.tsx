@@ -78,12 +78,22 @@ export default function Home() {
 
     const remoteParticipant = Object.values(participants).find((p) => !p.local);
     const remoteAudio = remoteParticipant?.tracks?.audio;
+    const remoteCustomAudio = remoteParticipant?.tracks?.customAudio;
+    const chosenTrack =
+      remoteAudio?.state === 'playable'
+        ? remoteAudio?.persistentTrack
+        : remoteCustomAudio?.state === 'playable'
+          ? remoteCustomAudio?.persistentTrack
+          : null;
 
-    if (remoteAudio?.state === 'playable' && remoteAudio.persistentTrack) {
-      const stream = new MediaStream([remoteAudio.persistentTrack]);
+    if (chosenTrack) {
+      const stream = new MediaStream([chosenTrack]);
       setRemoteStream(stream);
       if (botAudioRef.current) {
         botAudioRef.current.srcObject = stream;
+        botAudioRef.current.muted = false;
+        botAudioRef.current.volume = 1;
+        setNeedsAudioGesture(true);
         botAudioRef.current
           .play()
           .then(() => setNeedsAudioGesture(false))
@@ -198,7 +208,14 @@ export default function Home() {
         console.log('Daily track-started', event);
         const track = event?.track;
         const participant = event?.participant;
-        if (!track || track.kind !== 'audio' || participant?.local) return;
+        if (!track || track.kind !== 'audio' || participant?.local === true) return;
+        console.log('Daily remote audio track', {
+          id: track.id,
+          label: track.label,
+          muted: track.muted,
+          readyState: track.readyState,
+          participant,
+        });
         attachRemoteAudioTrack(track);
       });
       callObject.on('track-stopped', updateMediaStreams);
