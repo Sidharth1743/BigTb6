@@ -50,6 +50,18 @@ export default function Home() {
     'Finalizing triage score...',
   ];
 
+  const addMessage = useCallback((speaker: 'user' | 'bot', text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    const newMessage: TranscriptMessage = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      speaker,
+      text: trimmed,
+      timestamp: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, newMessage]);
+  }, []);
+
   const updateMediaStreams = useCallback(() => {
     const callObject = callObjectRef.current;
     if (!callObject) return;
@@ -133,6 +145,35 @@ export default function Home() {
         setConnectionStatus('error');
       });
 
+      callObject.on('transcription-started', (event) => {
+        console.log('Daily transcription-started', event);
+      });
+      callObject.on('transcription-message', (event: any) => {
+        console.log('Daily transcription-message', event);
+        const text =
+          event?.text ??
+          event?.transcript ??
+          event?.payload?.text ??
+          event?.payload?.transcript ??
+          '';
+        if (!text) return;
+
+        const participantId =
+          event?.participantId ??
+          event?.participant_id ??
+          event?.payload?.participantId ??
+          event?.payload?.participant_id ??
+          null;
+        let speaker: 'user' | 'bot' = 'bot';
+        if (participantId) {
+          const participants = callObject.participants() as Record<string, DailyParticipant & { local?: boolean }>;
+          if (participants?.[participantId]?.local) {
+            speaker = 'user';
+          }
+        }
+        addMessage(speaker, text);
+      });
+
       callObject.on('participant-joined', updateMediaStreams);
       callObject.on('participant-updated', updateMediaStreams);
       callObject.on('participant-left', updateMediaStreams);
@@ -142,6 +183,11 @@ export default function Home() {
       await callObject.join({ url: roomUrl, token });
       await callObject.setLocalAudio(micEnabled);
       await callObject.setLocalVideo(cameraEnabled);
+      try {
+        await callObject.startTranscription();
+      } catch (error) {
+        console.error('Failed to start transcription', error);
+      }
     } catch (error) {
       console.error('Failed to start session:', error);
       setConnectionStatus('error');
@@ -175,13 +221,6 @@ export default function Home() {
     setMessages([]);
   }, [localStream, remoteStream]);
 
-  useEffect(() => {
-    return () => {
-      if (process.env.NODE_ENV === 'production') {
-        void stopSession();
-      }
-    };
-  }, [stopSession]);
 
   const toggleMic = async () => {
     const callObject = callObjectRef.current;
