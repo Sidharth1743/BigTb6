@@ -91,8 +91,8 @@ export default function Home() {
       (remoteAudio?.state === 'loading' || remoteCustomAudio?.state === 'loading')
     ) {
       try {
-        callObject.setSubscribedTracks({
-          [remoteParticipantId]: { audio: true, video: false },
+        callObject.updateParticipant(remoteParticipantId, {
+          setSubscribedTracks: { audio: true, video: false },
         });
       } catch (error) {
         console.error('Failed to set subscribed tracks', error);
