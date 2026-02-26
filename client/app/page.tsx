@@ -77,13 +77,27 @@ export default function Home() {
       setLocalStream(null);
     }
 
-    const remoteParticipant = Object.values(participants).find((p) => !p.local);
+    const remoteEntry = Object.entries(participants).find(([, p]) => !p.local);
+    const remoteParticipant = remoteEntry?.[1];
+    const remoteParticipantId = remoteEntry?.[0];
     const remoteAudio = remoteParticipant?.tracks?.audio;
     const remoteCustomAudio = remoteParticipant?.tracks?.customAudio;
     console.log('Daily remote track states', {
       remoteAudio: remoteAudio?.state,
       remoteCustomAudio: remoteCustomAudio?.state,
     });
+    if (
+      remoteParticipantId &&
+      (remoteAudio?.state === 'loading' || remoteCustomAudio?.state === 'loading')
+    ) {
+      try {
+        callObject.setSubscribedTracks({
+          [remoteParticipantId]: { audio: true, video: false },
+        });
+      } catch (error) {
+        console.error('Failed to set subscribed tracks', error);
+      }
+    }
     const chosenTrack =
       remoteAudio?.state === 'playable'
         ? remoteAudio?.persistentTrack
