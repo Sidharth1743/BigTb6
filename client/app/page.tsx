@@ -86,10 +86,7 @@ export default function Home() {
       remoteAudio: remoteAudio?.state,
       remoteCustomAudio: remoteCustomAudio?.state,
     });
-    if (
-      remoteParticipantId &&
-      (remoteAudio?.state === 'loading' || remoteCustomAudio?.state === 'loading')
-    ) {
+    if (remoteParticipantId && (remoteAudio?.state || remoteCustomAudio?.state)) {
       try {
         callObject.updateParticipant(remoteParticipantId, {
           setSubscribedTracks: { audio: true, video: false },
@@ -220,7 +217,20 @@ export default function Home() {
         addMessage(speaker, text);
       });
 
-      callObject.on('participant-joined', updateMediaStreams);
+      callObject.on('participant-joined', (event: any) => {
+        console.log('Daily participant-joined', event);
+        const participantId = event?.participant?.participantId ?? event?.participant?.id;
+        if (participantId) {
+          try {
+            callObject.updateParticipant(participantId, {
+              setSubscribedTracks: { audio: true, video: false },
+            });
+          } catch (error) {
+            console.error('Failed to subscribe to participant', error);
+          }
+        }
+        updateMediaStreams();
+      });
       callObject.on('participant-updated', updateMediaStreams);
       callObject.on('participant-left', updateMediaStreams);
       callObject.on('track-started', (event: any) => {
