@@ -171,7 +171,7 @@ export default function Home() {
       }
 
       const callObject = DailyIframe.createCallObject({
-        subscribeToTracksAutomatically: true,
+        subscribeToTracksAutomatically: false,
       });
       callObjectRef.current = callObject;
 
