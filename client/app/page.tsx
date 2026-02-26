@@ -1,13 +1,20 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { PipecatClient } from '@pipecat-ai/client-js';
-import { SmallWebRTCTransport } from '@pipecat-ai/small-webrtc-transport';
+import DailyIframe, { DailyCall } from '@daily-co/daily-js';
 import { ConnectionStatus } from '@/components/ConnectionStatus';
 import { VideoConsultation } from '@/components/VideoConsultation';
 import { TranscriptPanel, TranscriptMessage } from '@/components/TranscriptPanel';
 
 type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
+
+type DailyParticipant = {
+  local?: boolean;
+  tracks?: {
+    audio?: { state?: string; persistentTrack?: MediaStreamTrack | null };
+    video?: { state?: string; persistentTrack?: MediaStreamTrack | null };
+  };
+};
 
 export default function Home() {
   const [connectionStatus, setConnectionStatus] = useState<ConnectionState>('disconnected');
@@ -16,6 +23,7 @@ export default function Home() {
   const [screenSharing, setScreenSharing] = useState(false);
   const [messages, setMessages] = useState<TranscriptMessage[]>([]);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [needsAudioGesture, setNeedsAudioGesture] = useState(false);
   const [xrayFile, setXrayFile] = useState<File | null>(null);
   const [xrayUploading, setXrayUploading] = useState(false);
@@ -23,16 +31,17 @@ export default function Home() {
   const [xrayUploadError, setXrayUploadError] = useState<string | null>(null);
   const [xrayPreviewUrl, setXrayPreviewUrl] = useState<string | null>(null);
   const [xrayStatusIndex, setXrayStatusIndex] = useState(0);
-  const botBufferRef = useRef<string>('');
-  const liveBotMessageIdRef = useRef<string | null>(null);
-  
-  const clientRef = useRef<PipecatClient | null>(null);
-  const transportRef = useRef<SmallWebRTCTransport | null>(null);
+
+  const callObjectRef = useRef<DailyCall | null>(null);
   const botAudioRef = useRef<HTMLAudioElement | null>(null);
-  const startEndpoint =
-    process.env.NEXT_PUBLIC_PIPECAT_START_ENDPOINT ?? 'http://localhost:7860/start';
+
   const xrayUploadEndpoint =
     process.env.NEXT_PUBLIC_XRAY_UPLOAD_ENDPOINT ?? 'http://localhost:8000/upload_xray';
+  const apiBase =
+    process.env.NEXT_PUBLIC_API_BASE ??
+    (xrayUploadEndpoint.endsWith('/upload_xray')
+      ? xrayUploadEndpoint.replace(/\/upload_xray$/, '')
+      : 'http://localhost:8000');
 
   const xrayStatusMessages = [
     'Scanning image parameters...',
@@ -41,209 +50,172 @@ export default function Home() {
     'Finalizing triage score...',
   ];
 
-  // Add message to transcript
-  const addMessage = useCallback((speaker: 'user' | 'bot', text: string) => {
-    const newMessage: TranscriptMessage = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      speaker,
-      text,
-      timestamp: new Date().toISOString(),
-    };
-    setMessages(prev => [...prev, newMessage]);
-  }, []);
+  const updateMediaStreams = useCallback(() => {
+    const callObject = callObjectRef.current;
+    if (!callObject) return;
 
-  const flushBotBuffer = useCallback(() => {
-    const text = botBufferRef.current.trim();
-    if (text) {
-      if (liveBotMessageIdRef.current) {
-        setMessages(prev =>
-          prev.map(msg =>
-            msg.id === liveBotMessageIdRef.current ? { ...msg, text } : msg
-          )
-        );
-      } else {
-        addMessage('bot', text);
+    const participants = callObject.participants() as Record<string, DailyParticipant>;
+    const localParticipant = participants.local;
+    const localVideo = localParticipant?.tracks?.video;
+
+    if (localVideo?.state === 'playable' && localVideo.persistentTrack) {
+      setLocalStream(new MediaStream([localVideo.persistentTrack]));
+    } else {
+      setLocalStream(null);
+    }
+
+    const remoteParticipant = Object.values(participants).find((p) => !p.local);
+    const remoteAudio = remoteParticipant?.tracks?.audio;
+
+    if (remoteAudio?.state === 'playable' && remoteAudio.persistentTrack) {
+      const stream = new MediaStream([remoteAudio.persistentTrack]);
+      setRemoteStream(stream);
+      if (botAudioRef.current) {
+        botAudioRef.current.srcObject = stream;
+        botAudioRef.current
+          .play()
+          .then(() => setNeedsAudioGesture(false))
+          .catch(() => setNeedsAudioGesture(true));
       }
+    } else {
+      setRemoteStream(null);
     }
-    botBufferRef.current = '';
-    liveBotMessageIdRef.current = null;
-  }, [addMessage]);
-
-  const attachBotAudioTrack = useCallback((track: MediaStreamTrack) => {
-    if (!botAudioRef.current) return;
-    if (track.kind !== 'audio') return;
-
-    const stream = new MediaStream([track]);
-    botAudioRef.current.srcObject = stream;
-
-    botAudioRef.current
-      .play()
-      .then(() => setNeedsAudioGesture(false))
-      .catch(() => setNeedsAudioGesture(true));
   }, []);
 
-  // Initialize media
-  const initMedia = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: true,
-      });
-      setLocalStream(stream);
-      return stream;
-    } catch (error) {
-      console.error('Error accessing media devices:', error);
-      return null;
-    }
-  };
-
-  // Start session
   const startSession = async () => {
+    if (callObjectRef.current) return;
     if (connectionStatus === 'connected' || connectionStatus === 'connecting') return;
 
     setConnectionStatus('connecting');
 
     try {
-      // Initialize media
-      await initMedia();
-      
-      // Use SmallWebRTC transport with explicit audio configuration
-      const transport = new SmallWebRTCTransport({
-        waitForICEGathering: false,
+      const roomResponse = await fetch(`${apiBase}/create-room`, {
+        method: 'POST',
       });
-      transportRef.current = transport;
-      
-      clientRef.current = new PipecatClient({
-        transport,
-        enableMic: micEnabled,
-        enableCam: cameraEnabled,
-        callbacks: {
-          onBotReady: () => {
-            console.log('Bot ready');
-            setConnectionStatus('connected');
-          },
-          onUserTranscript: (data: { text: string }) => {
-            if (data.text) {
-              addMessage('user', data.text);
-            }
-          },
-          onBotOutput: (data: { text?: string }) => {
-            if (data.text) {
-              botBufferRef.current += data.text;
-              if (!liveBotMessageIdRef.current) {
-                const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-                liveBotMessageIdRef.current = id;
-                setMessages(prev => [
-                  ...prev,
-                  {
-                    id,
-                    speaker: 'bot',
-                    text: '',
-                    timestamp: new Date().toISOString(),
-                  },
-                ]);
-              }
-              const id = liveBotMessageIdRef.current;
-              setMessages(prev =>
-                prev.map(msg =>
-                  msg.id === id ? { ...msg, text: botBufferRef.current } : msg
-                )
-              );
-            }
-          },
-          onBotStartedSpeaking: () => {
-            console.log('Bot started speaking');
-          },
-          onBotStoppedSpeaking: () => {
-            console.log('Bot stopped speaking');
-            flushBotBuffer();
-          },
-          onTransportStateChanged: (state: string) => {
-            console.log('Transport state:', state);
-            if (state === 'connected') {
-              setConnectionStatus('connected');
-            } else if (state === 'disconnected') {
-              setConnectionStatus('disconnected');
-            }
-          },
-          onTrackStarted: (track: MediaStreamTrack, participant?: { local: boolean }) => {
-            if (participant?.local === true) return;
-            attachBotAudioTrack(track);
-          },
-          onError: (error) => {
-            console.error('Error:', error);
-            setConnectionStatus('error');
-          },
-        },
+      if (!roomResponse.ok) {
+        throw new Error('Failed to create Daily room');
+      }
+
+      const roomData = await roomResponse.json();
+      const roomUrl = roomData?.url as string | undefined;
+      const token = roomData?.token as string | undefined;
+
+      if (!roomUrl || !token) {
+        throw new Error('Missing room URL or token');
+      }
+
+      const startResponse = await fetch(`${apiBase}/start-bot`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ room_url: roomUrl, token }),
       });
 
-      await clientRef.current.startBotAndConnect({ endpoint: startEndpoint });
-      
+      if (!startResponse.ok) {
+        throw new Error('Failed to start bot');
+      }
+
+      const callObject = DailyIframe.createCallObject();
+      callObjectRef.current = callObject;
+
+      callObject.on('joining-meeting', (event) => {
+        console.log('Daily joining-meeting', event);
+      });
+      callObject.on('joined-meeting', (event) => {
+        console.log('Daily joined-meeting', event);
+        setConnectionStatus('connected');
+      });
+      callObject.on('left-meeting', (event) => {
+        console.log('Daily left-meeting', event);
+        setConnectionStatus('disconnected');
+      });
+      callObject.on('error', (event) => {
+        console.error('Daily error', event);
+        setConnectionStatus('error');
+      });
+
+      callObject.on('participant-joined', updateMediaStreams);
+      callObject.on('participant-updated', updateMediaStreams);
+      callObject.on('participant-left', updateMediaStreams);
+      callObject.on('track-started', updateMediaStreams);
+      callObject.on('track-stopped', updateMediaStreams);
+
+      await callObject.join({ url: roomUrl, token });
+      await callObject.setLocalAudio(micEnabled);
+      await callObject.setLocalVideo(cameraEnabled);
     } catch (error) {
       console.error('Failed to start session:', error);
       setConnectionStatus('error');
     }
   };
 
-  // Stop session
-  const stopSession = async () => {
-    if (clientRef.current) {
-      await clientRef.current.disconnect();
-      clientRef.current = null;
+  const stopSession = useCallback(async () => {
+    const callObject = callObjectRef.current;
+    if (callObject) {
+      try {
+        await callObject.leave();
+      } catch (error) {
+        console.error('Error leaving call:', error);
+      }
+      callObject.destroy();
+      callObjectRef.current = null;
     }
-    
-    // Stop local stream
+
     if (localStream) {
-      localStream.getTracks().forEach(track => track.stop());
+      localStream.getTracks().forEach((track) => track.stop());
       setLocalStream(null);
     }
-    
+
+    if (remoteStream) {
+      remoteStream.getTracks().forEach((track) => track.stop());
+      setRemoteStream(null);
+    }
+
     setConnectionStatus('disconnected');
     setScreenSharing(false);
     setMessages([]);
-  };
+  }, [localStream, remoteStream]);
 
-  // Toggle microphone
-  const toggleMic = async () => {
-    if (!clientRef.current) return;
-    
-    try {
-      if (micEnabled) {
-        await clientRef.current.enableMic(false);
-      } else {
-        await clientRef.current.enableMic(true);
+  useEffect(() => {
+    return () => {
+      if (process.env.NODE_ENV === 'production') {
+        void stopSession();
       }
+    };
+  }, [stopSession]);
+
+  const toggleMic = async () => {
+    const callObject = callObjectRef.current;
+    if (!callObject) return;
+
+    try {
+      await callObject.setLocalAudio(!micEnabled);
       setMicEnabled(!micEnabled);
     } catch (error) {
       console.error('Error toggling mic:', error);
     }
   };
 
-  // Toggle camera
   const toggleCamera = async () => {
-    if (!clientRef.current) return;
-    
+    const callObject = callObjectRef.current;
+    if (!callObject) return;
+
     try {
-      if (cameraEnabled) {
-        await clientRef.current.enableCam(false);
-      } else {
-        await clientRef.current.enableCam(true);
-      }
+      await callObject.setLocalVideo(!cameraEnabled);
       setCameraEnabled(!cameraEnabled);
     } catch (error) {
       console.error('Error toggling camera:', error);
     }
   };
 
-  // Toggle screen share
   const toggleScreenShare = async () => {
-    if (!clientRef.current) return;
-    
+    const callObject = callObjectRef.current;
+    if (!callObject) return;
+
     try {
       if (screenSharing) {
-        await clientRef.current.enableScreenShare(false);
+        await callObject.stopScreenShare();
       } else {
-        await clientRef.current.enableScreenShare(true);
+        await callObject.startScreenShare();
       }
       setScreenSharing(!screenSharing);
     } catch (error) {
@@ -307,7 +279,7 @@ export default function Home() {
     <div className="min-h-screen bg-slate-50">
       {/* Bot audio output */}
       <audio ref={botAudioRef} autoPlay playsInline className="hidden" />
-      
+
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-slate-200">
         {/* BigTB6 logo - top left corner, outside centered container */}
@@ -333,7 +305,7 @@ export default function Home() {
           {/* Microphone Toggle */}
           <button
             onClick={toggleMic}
-            disabled={!clientRef.current}
+            disabled={connectionStatus !== 'connected'}
             className={`p-2 rounded-lg border border-slate-200 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed ${
               micEnabled
                 ? 'bg-white text-slate-700 hover:bg-slate-50'
@@ -357,7 +329,7 @@ export default function Home() {
           {/* Camera Toggle */}
           <button
             onClick={toggleCamera}
-            disabled={!clientRef.current}
+            disabled={connectionStatus !== 'connected'}
             className={`p-2 rounded-lg border border-slate-200 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed ${
               cameraEnabled
                 ? 'bg-white text-slate-700 hover:bg-slate-50'
@@ -380,7 +352,7 @@ export default function Home() {
           {/* Screen Share Toggle */}
           <button
             onClick={toggleScreenShare}
-            disabled={!clientRef.current}
+            disabled={connectionStatus !== 'connected'}
             className={`p-2 rounded-lg border border-slate-200 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed ${
               screenSharing
                 ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -400,9 +372,9 @@ export default function Home() {
       <main className="pt-20 pb-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Video Consultation Area */}
-          <VideoConsultation 
+          <VideoConsultation
             localStream={localStream}
-            remoteStream={null}
+            remoteStream={remoteStream}
             isConnected={connectionStatus === 'connected'}
             sidePanel={(
               <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
@@ -469,7 +441,7 @@ export default function Home() {
               </div>
             )}
           />
-          
+
           {/* Transcript Panel */}
           <TranscriptPanel messages={messages} />
 
