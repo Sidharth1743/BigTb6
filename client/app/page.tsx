@@ -80,6 +80,10 @@ export default function Home() {
     const remoteParticipant = Object.values(participants).find((p) => !p.local);
     const remoteAudio = remoteParticipant?.tracks?.audio;
     const remoteCustomAudio = remoteParticipant?.tracks?.customAudio;
+    console.log('Daily remote track states', {
+      remoteAudio: remoteAudio?.state,
+      remoteCustomAudio: remoteCustomAudio?.state,
+    });
     const chosenTrack =
       remoteAudio?.state === 'playable'
         ? remoteAudio?.persistentTrack
@@ -206,7 +210,13 @@ export default function Home() {
       callObject.on('participant-updated', updateMediaStreams);
       callObject.on('participant-left', updateMediaStreams);
       callObject.on('track-started', (event: any) => {
-        console.log('Daily track-started', event);
+        console.log('Daily track-started', {
+          type: event?.type,
+          trackKind: event?.track?.kind,
+          trackLabel: event?.track?.label,
+          participantLocal: event?.participant?.local,
+          participantId: event?.participant?.participantId ?? event?.participant?.id,
+        });
         const track = event?.track;
         const participant = event?.participant;
         if (!track || track.kind !== 'audio' || participant?.local === true) return;
